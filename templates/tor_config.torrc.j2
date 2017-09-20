@@ -1,0 +1,3 @@
+SOCKSPort {{ item }}
+DataDirectory /var/lib/tor/{{ item }}
+ExitNodes {{ '{' }}{{ output_region }}{{ '}' }}

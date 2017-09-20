@@ -1,0 +1,32 @@
+global
+    chroot      /var/lib/haproxy
+    pidfile     /var/run/haproxy.pid
+    maxconn     4000
+    user        haproxy
+    group       haproxy
+    daemon
+    stats socket /var/lib/haproxy/stats
+
+defaults
+    mode                    tcp
+    log                     global
+    option                  dontlognull
+    option                  redispatch
+    retries                 3
+    timeout queue           1m
+    timeout connect         10s
+    timeout client          1m
+    timeout server          1m
+    timeout http-keep-alive 10s
+    timeout check           10s
+    maxconn                 4000
+
+frontend  main *:{{ haproxy_port }}
+    mode tcp
+    default_backend privoxy
+
+backend privoxy
+    balance roundrobin
+{% for privoxy in privoxy_ports %}
+    server privoxy{{ privoxy }} 127.0.0.1:{{ privoxy }} check  
+{% endfor %}

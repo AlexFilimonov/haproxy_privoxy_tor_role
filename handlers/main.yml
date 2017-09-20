@@ -1,0 +1,19 @@
+---
+# handlers file for hator
+- name: reload systemd
+  systemd: name=privoxy state=stopped daemon_reload=yes
+
+- name: restart privoxy instances
+  service: name="privoxy@{{ item}}" state=restarted
+  with_items: "{{ privoxy_ports }}"
+  loop_control:
+    pause: 2
+
+- name: restart tor instances
+  service: name="tor@{{ item }}" state=restarted
+  with_items: "{{ tor_ports }}"
+  loop_control:
+    pause: 5
+
+- name: restart haproxy
+  service: name=haproxy state=restarted

@@ -1,0 +1,12 @@
+[Unit]
+Description=Privoxy Web Proxy (instance: %i)
+After=syslog.target network.target nss-lookup.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+PIDFile=/run/privoxy_%i.pid
+ExecStart=/usr/sbin/privoxy --pidfile /run/privoxy_%i.pid --user privoxy /etc/privoxy/%i.prrc
+
+[Install]
+WantedBy=multi-user.target 

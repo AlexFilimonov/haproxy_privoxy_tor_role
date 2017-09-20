@@ -1,0 +1,100 @@
+---
+- name: Install EPEL repository
+  yum: name=epel-release state=present
+
+- name: Disable SELinux
+  selinux: state=permissive policy=targeted
+
+- name: Install privoxy package
+  yum: name=privoxy state=present
+  tags: privoxy
+
+- name: Coping multiinstance unit file
+  copy:
+    src: 'privoxy@.service'
+    dest: '/etc/systemd/system/privoxy@.service'
+    owner: root
+    group: root
+    mode: 0644
+  notify: reload systemd
+  tags: privoxy
+
+- name: Read new service file
+  meta: flush_handlers
+  tags: privoxy
+
+- name: Coping privoxy instance config
+  template:
+    src: privoxy_config.prrc.j2
+    dest: "/etc/privoxy/{{ item.0 }}.prrc"
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart privoxy instances
+  with_together:
+    - "{{ privoxy_ports }}"
+    - "{{ tor_ports }}"
+  tags: privoxy
+
+- name: Start and enable privoxy instance
+  service: name="privoxy@{{ item }}" state=started enabled=yes
+  with_items: "{{ privoxy_ports }}"
+  tags: privoxy
+
+- name: Install TOR package
+  yum: name=tor state=present
+  tags: tor
+
+- name: Coping tor instance config
+  template:
+    src: tor_config.torrc.j2
+    dest: "/etc/tor/{{ item }}.torrc"
+    owner: root
+    group: root
+    mode: 0644
+  with_items: "{{ tor_ports }}"
+  notify: restart tor instances
+  tags: tor
+
+- name: Create tor data directory
+  file:
+    path: "/var/lib/tor/{{ item }}"
+    owner: toranon
+    group: root
+    mode: 0750
+    state: directory
+  with_items: "{{ tor_ports }}"
+  tags: tor
+
+- name: Start and enable tor instance
+  service: name="tor@{{ item }}" state=started enabled=yes
+  with_items: "{{ tor_ports }}"
+  loop_control: 
+    pause: 5
+  tags: tor
+
+- name: Install haproxy package
+  yum: name=haproxy state=present
+  tags: haproxy
+
+- name: Coping haproxy config
+  template:
+    src: haproxy_config.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+    owner: root
+    group: root
+    mode: 0644
+  notify: restart haproxy
+  tags: haproxy
+
+- name: Start and enable haproxy
+  service: name=haproxy state=started enabled=yes
+  tags: haproxy
+
+- name: Open haproxy port
+  firewalld:
+    port: "{{ haproxy_port }}/tcp"
+    state: enabled
+    immediate: yes
+    permanent: yes
+  tags: haproxy
